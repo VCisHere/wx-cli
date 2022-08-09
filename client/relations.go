@@ -469,6 +469,13 @@ func (contacts Contacts) Count() int {
 	return len(contacts)
 }
 
+func (contacts Contacts) First() *Contact {
+	if contacts.Count() > 0 {
+		return contacts[0]
+	}
+	return nil
+}
+
 func (contacts Contacts) Search(limit int, condFuncList ...func(contact *Contact) bool) (results Contacts) {
 	if condFuncList == nil {
 		return contacts

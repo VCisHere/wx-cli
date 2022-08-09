@@ -15,6 +15,11 @@ import (
 	"time"
 )
 
+// todo: 更灵活的 error
+var (
+	ErrMsgIsFromSys = errors.New("can not found sender from system message")
+)
+
 type Message struct {
 	isAt    bool
 	AppInfo struct {
@@ -77,7 +82,7 @@ func (m *Message) SenderInGroup() (*User, error) {
 		if m.FromUserName == m.Bot.self.User.UserName {
 			return m.Bot.self.User, nil
 		}
-		return nil, errors.New("can not found sender from system message")
+		return nil, ErrMsgIsFromSys
 	}
 	group, err := m.Sender()
 	if err != nil {
@@ -105,20 +110,24 @@ func (m *Message) Receiver() (*User, error) {
 	if m.IsSystem() {
 		return m.Bot.self.User, nil
 	}
+	// todo: find in m.Bot.Storage.Response.ContactList
+	username := m.ToUserName
+	contacts, err := m.Bot.self.Contacts()
+	if err == nil {
+		users := contacts.SearchByUserName(1, username)
+		if users.Count() > 0 {
+			return users.First().User, nil
+		}
+	}
 	if m.IsSendByGroup() {
 		groups, err := m.Bot.self.Groups()
 		if err != nil {
 			return nil, err
 		}
-		username := m.FromUserName
-		if m.IsSendBySelf() {
-			username = m.ToUserName
-		}
 		users := groups.SearchByUserName(1, username)
 		if users.Count() == 0 {
 			return nil, ErrNoSuchUserFoundError
 		}
-		// todo: find in m.Bot.Storage.Response.ContactList
 		return users.First().User, nil
 	} else if m.ToUserName == m.Bot.self.UserName {
 		return m.Bot.self.User, nil

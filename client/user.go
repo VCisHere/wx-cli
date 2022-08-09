@@ -174,11 +174,9 @@ func (s *Self) Members(update ...bool) (Members, error) {
 	return s.members, nil
 }
 
-func (s *Self) Contacts(update ...bool) (Contacts, error) {
-	if s.contacts == nil || (len(update) > 0 && update[0]) {
-		if err := s.updateContacts(); err != nil {
-			return nil, err
-		}
+func (s *Self) Contacts() (Contacts, error) {
+	if err := s.updateContacts(); err != nil {
+		return nil, err
 	}
 	return s.contacts, nil
 }
@@ -196,8 +194,14 @@ func (s *Self) updateMembers() error {
 }
 
 func (s *Self) updateContacts() error {
-	//info := s.Bot.Storage.Response.ContactList
-	//contacts, err := s.Bot.
+	s.contacts = make(Contacts, 0)
+	for _, user := range s.Bot.Storage.Response.ContactList {
+		u := user
+		contact := &Contact{
+			User: &u,
+		}
+		s.contacts = append(s.contacts, contact)
+	}
 	return nil
 }
 

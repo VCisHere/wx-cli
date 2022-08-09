@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 	"wx-cli/client"
 	"wx-cli/storage"
@@ -106,59 +107,44 @@ func (h *Helper) MessageToString(msg *client.Message) string {
 	sender, err := msg.Sender()
 	if err != nil {
 		needSenderText = false
-	} else {
+		senderText = "[Unknown]"
 		fmt.Println(err)
+	} else {
 		fmt.Println("Sender:", sender.NickName)
 	}
 	receiver, err := msg.Receiver()
 	if err != nil {
-		fmt.Println(err)
 		needReceiverText = false
+		receiverText = "[Unknown]"
+		fmt.Println(err)
 	} else {
 		fmt.Println("Receiver:", receiver.NickName)
 	}
 
-	if needSenderText {
-		if sender.IsFriend() {
-			msgType = "F"
-			senderText = fmt.Sprintf("[%s]", h.GetUserName(sender))
-		} else if sender.IsGroup() {
+	if needSenderText && needReceiverText {
+		if sender.IsGroup() || receiver.IsGroup() {
 			msgType = "G"
-			senderInGroup, _ := msg.SenderInGroup()
-			senderText = fmt.Sprintf("[%s][%s]", h.GetUserName(sender), h.GetUserName(senderInGroup))
-		} else if sender.IsMP() {
-			msgType = "P"
-			senderText = fmt.Sprintf("[%s]", h.GetUserName(sender))
-		}
-	}
-
-	if needReceiverText {
-		if receiver == h.self.User {
-			msgType = "S"
-			senderText = fmt.Sprintf("[%s]", h.GetUserName(sender))
-			receiverText = fmt.Sprintf("[%s]", h.GetUserName(receiver))
-		} else if receiver.IsFriend() {
+			senderInGroup, err := msg.SenderInGroup()
+			if err != nil {
+				if errors.Is(err, client.ErrMsgIsFromSys) {
+					senderText = fmt.Sprintf("[%s][System]", h.GetUserName(sender))
+				} else {
+					senderText = fmt.Sprintf("[Unknown][System]")
+				}
+			} else {
+				senderText = fmt.Sprintf("[%s][%s]", h.GetUserName(receiver), h.GetUserName(senderInGroup))
+			}
+		} else if sender.IsFriend() && receiver.IsFriend() {
 			msgType = "F"
+			senderText = fmt.Sprintf("[%s]->", h.GetUserName(sender))
 			receiverText = fmt.Sprintf("[%s]", h.GetUserName(receiver))
-		} else if receiver.IsGroup() {
-			msgType = "G"
-		} else if receiver.IsMP() {
+		} else if sender.IsMP() || receiver.IsMP() {
 			msgType = "P"
+			senderText = fmt.Sprintf("[%s]->", h.GetUserName(sender))
 			receiverText = fmt.Sprintf("[%s]", h.GetUserName(receiver))
 		}
 	}
 
-	if sender == h.self.User {
-
-	} else {
-		if sender.IsFriend() {
-
-		} else if sender.IsGroup() {
-
-		} else if sender.IsMP() {
-
-		}
-	}
 	createTime := msg.CreateTime
 	timeStr := util.Int64ToTimeString(createTime)
 	messageStr := HandleMessage(msg)
