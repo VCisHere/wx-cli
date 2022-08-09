@@ -97,7 +97,7 @@ func (c *Client) setCookie(resp *http.Response) {
 }
 
 // Do 抽象Do方法,将所有的有效的cookie存入Client.cookies
-// 方便热登陆时获取
+// 方便热登录时获取
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	resp, err := c.do(req)
 	if err == nil {
@@ -700,7 +700,7 @@ func (c *Client) WebWxRelationPin(request *BaseRequest, op uint8, user *User) (*
 	return c.Do(req)
 }
 
-// WebWxPushLogin 免扫码登陆接口
+// WebWxPushLogin 免扫码登录接口
 func (c *Client) WebWxPushLogin(uin int) (*http.Response, error) {
 	path, _ := url.Parse(c.Domain.BaseHost() + webwxpushloginurl)
 	params := url.Values{"uin": {strconv.Itoa(uin)}}

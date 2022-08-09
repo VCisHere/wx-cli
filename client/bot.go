@@ -6,14 +6,12 @@ import (
 	"errors"
 	"log"
 	"net/url"
-	"os/exec"
-	"runtime"
 	"sync"
 )
 
 type Bot struct {
 	ScanCallBack        func(body []byte)            // 扫码回调,可获取扫码用户的头像
-	LoginCallBack       func(body []byte)            // 登陆回调
+	LoginCallBack       func(body []byte)            // 登录回调
 	LogoutCallBack      func(bot *Bot)               // 退出回调
 	UUIDCallback        func(uuid string)            // 获取UUID的回调函数
 	SyncCheckCallback   func(resp SyncCheckResponse) // 心跳回调
@@ -68,7 +66,7 @@ func (b *Bot) HotLogin(storage HotReloadStorage, retry ...bool) error {
 
 	var err error
 
-	// 如果load出错了,就执行正常登陆逻辑
+	// 如果load出错了,就执行正常登录逻辑
 	// 第一次没有数据load都会出错的
 	item, err := NewHotReloadStorageItem(storage)
 
@@ -81,14 +79,14 @@ func (b *Bot) HotLogin(storage HotReloadStorage, retry ...bool) error {
 	}
 
 	// 如果webInit出错,则说明可能身份信息已经失效
-	// 如果retry为True的话,则进行正常登陆
+	// 如果retry为True的话,则进行正常登录
 	if err = b.WebInit(); err != nil && (len(retry) > 0 && retry[0]) {
 		err = b.Login()
 	}
 	return err
 }
 
-// 热登陆初始化
+// 热登录初始化
 func (b *Bot) hotLoginInit(item HotReloadStorageItem) error {
 	cookies := item.Cookies
 	for u, ck := range cookies {
@@ -183,7 +181,7 @@ func (b *Bot) HandleLogin(data []byte) error {
 	// 将BaseRequest存到storage里面方便后续调用
 	b.Storage.Request = request
 
-	// 如果是热登陆,则将当前的重要信息写入hotReloadStorage
+	// 如果是热登录,则将当前的重要信息写入hotReloadStorage
 	if b.isHot {
 		if err = b.DumpHotReloadStorage(); err != nil {
 			return err
@@ -307,7 +305,11 @@ func (b *Bot) Block() error {
 	return nil
 }
 
-// Exit 主动退出，让 Block 不在阻塞
+func (b *Bot) Done() <-chan struct{} {
+	return b.context.Done()
+}
+
+// Exit 主动退出，让 Block 不再阻塞
 func (b *Bot) Exit() {
 	if b.LogoutCallBack != nil {
 		b.LogoutCallBack(b)
@@ -348,89 +350,17 @@ func (b *Bot) DumpHotReloadStorage() error {
 	return json.NewEncoder(b.HotReloadStorage).Encode(item)
 }
 
-// OnLogin is a setter for LoginCallBack
-func (b *Bot) OnLogin(f func(body []byte)) {
-	b.LoginCallBack = f
-}
-
-// OnScanned is a setter for ScanCallBack
-func (b *Bot) OnScanned(f func(body []byte)) {
-	b.ScanCallBack = f
-}
-
-// OnLogout is a setter for LogoutCallBack
-func (b *Bot) OnLogout(f func(bot *Bot)) {
-	b.LogoutCallBack = f
-}
-
 // NewBot Bot的构造方法
-func NewBot() *Bot {
+func NewBot(mode Mode) *Bot {
 	caller := DefaultCaller()
-	// 默认行为为桌面模式
-	caller.Client.SetMode(Normal)
+	caller.Client.SetMode(mode)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Bot{Caller: caller, Storage: &Storage{}, context: ctx, cancel: cancel}
-}
-
-// DefaultBot 默认的Bot的构造方法,
-// mode不传入默认为 openwechat.Desktop,详情见mode
-//     bot := openwechat.DefaultBot(openwechat.Desktop)
-func DefaultBot(modes ...Mode) *Bot {
-	bot := NewBot()
-	if len(modes) > 0 {
-		bot.Caller.Client.SetMode(modes[0])
-	}
-	// 获取二维码回调
-	bot.UUIDCallback = PrintlnQrcodeUrl
-	// 扫码回调
-	bot.ScanCallBack = func(body []byte) {
-		log.Println("扫码成功,请在手机上确认登录")
-	}
-	// 登录回调
-	bot.LoginCallBack = func(body []byte) {
-		log.Println("登录成功")
-	}
-	// 心跳回调函数
-	// 默认的行为打印SyncCheckResponse
-	bot.SyncCheckCallback = func(resp SyncCheckResponse) {
-		log.Printf("RetCode:%s  Selector:%s", resp.RetCode, resp.Selector)
-	}
-	return bot
 }
 
 // GetQrcodeUrl 通过uuid获取登录二维码的url
 func GetQrcodeUrl(uuid string) string {
 	return qrcode + uuid
-}
-
-// PrintlnQrcodeUrl 打印登录二维码
-func PrintlnQrcodeUrl(uuid string) {
-	println("访问下面网址扫描二维码登录")
-	qrcodeUrl := GetQrcodeUrl(uuid)
-	println(qrcodeUrl)
-
-	// browser open the login url
-	_ = open(qrcodeUrl)
-}
-
-// open opens the specified URL in the default browser of the user.
-func open(url string) error {
-	var (
-		cmd  string
-		args []string
-	)
-
-	switch runtime.GOOS {
-	case "windows":
-		cmd, args = "cmd", []string{"/c", "start"}
-	case "darwin":
-		cmd = "open"
-	default:
-		// "linux", "freebsd", "openbsd", "netbsd"
-		cmd = "xdg-open"
-	}
-	args = append(args, url)
-	return exec.Command(cmd, args...).Start()
 }
 
 // IsHot returns true if is hot login otherwise false

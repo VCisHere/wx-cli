@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-// Storage 身份信息, 维持整个登陆的Session会话
+// Storage 身份信息, 维持整个登录的Session会话
 type Storage struct {
 	LoginInfo *LoginInfo
 	Request   *BaseRequest
@@ -23,7 +23,7 @@ type HotReloadStorageItem struct {
 	UUID         string
 }
 
-// HotReloadStorage 热登陆存储接口
+// HotReloadStorage 热登录存储接口
 type HotReloadStorage io.ReadWriter
 
 // JsonFileHotReloadStorage 实现HotReloadStorage接口

@@ -6,7 +6,9 @@ import (
 	"time"
 )
 
-type Friend struct{ *User }
+type Friend struct {
+	*User
+}
 
 // implement fmt.Stringer
 func (f Friend) String() string {
@@ -172,7 +174,9 @@ func (f Friends) SendFile(file *os.File, delay ...time.Duration) error {
 	return nil
 }
 
-type Group struct{ *User }
+type Group struct {
+	*User
+}
 
 // implement fmt.Stringer
 func (g Group) String() string {
@@ -333,7 +337,9 @@ func (g Groups) Search(limit int, condFuncList ...func(group *Group) bool) (resu
 }
 
 // Mp 公众号对象
-type Mp struct{ *User }
+type Mp struct {
+	*User
+}
 
 func (m Mp) String() string {
 	return fmt.Sprintf("<Mp:%s>", m.NickName)
@@ -451,4 +457,42 @@ func (m Mps) GetByNickName(nickname string) *Mp {
 // GetByUserName 根据username查询一个Mp
 func (m Mps) GetByUserName(username string) *Mp {
 	return m.SearchByUserName(1, username).First()
+}
+
+type Contact struct {
+	*User
+}
+
+type Contacts []*Contact
+
+func (contacts Contacts) Count() int {
+	return len(contacts)
+}
+
+func (contacts Contacts) Search(limit int, condFuncList ...func(contact *Contact) bool) (results Contacts) {
+	if condFuncList == nil {
+		return contacts
+	}
+	if limit <= 0 {
+		limit = contacts.Count()
+	}
+	for _, member := range contacts {
+		if results.Count() == limit {
+			break
+		}
+		var passCount int
+		for _, condFunc := range condFuncList {
+			if condFunc(member) {
+				passCount++
+			}
+		}
+		if passCount == len(condFuncList) {
+			results = append(results, member)
+		}
+	}
+	return
+}
+
+func (contacts Contacts) SearchByUserName(limit int, username string) (results Contacts) {
+	return contacts.Search(limit, func(contact *Contact) bool { return contact.UserName == username })
 }

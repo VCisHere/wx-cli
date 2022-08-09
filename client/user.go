@@ -158,6 +158,7 @@ type Self struct {
 	members    Members
 	friends    Friends
 	groups     Groups
+	contacts   Contacts
 	mps        Mps
 }
 
@@ -173,6 +174,15 @@ func (s *Self) Members(update ...bool) (Members, error) {
 	return s.members, nil
 }
 
+func (s *Self) Contacts(update ...bool) (Contacts, error) {
+	if s.contacts == nil || (len(update) > 0 && update[0]) {
+		if err := s.updateContacts(); err != nil {
+			return nil, err
+		}
+	}
+	return s.contacts, nil
+}
+
 // 更新联系人处理
 func (s *Self) updateMembers() error {
 	info := s.Bot.Storage.LoginInfo
@@ -182,6 +192,12 @@ func (s *Self) updateMembers() error {
 	}
 	members.init(s)
 	s.members = members
+	return nil
+}
+
+func (s *Self) updateContacts() error {
+	//info := s.Bot.Storage.Response.ContactList
+	//contacts, err := s.Bot.
 	return nil
 }
 

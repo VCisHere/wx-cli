@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/skip2/go-qrcode"
-	"io/ioutil"
-	"time"
+	"github.com/urfave/cli/v2"
+	"log"
+	"os"
+	"strings"
 	"wx-cli/client"
+	"wx-cli/cmd"
+	"wx-cli/helper"
 )
 
 func ConsoleQrCode(uuid string) {
@@ -13,33 +18,19 @@ func ConsoleQrCode(uuid string) {
 	fmt.Println(q.ToString(true))
 }
 
+func ScanCallback(body []byte) {
+	log.Println("Waiting Confirm...")
+}
+
+func LoginCallback(body []byte) {
+	log.Println("Login Succeeded")
+}
+
 func MessageHandler(msg *client.Message) {
 	if len(msg.Content) == 0 {
 		return
 	}
-	sender, _ := msg.Sender()
-	senderName := sender.NickName
-	prefix := fmt.Sprintf("[%s]:", senderName)
-	var text string
-	if msg.IsText() {
-		text = msg.Content
-	} else if msg.IsPicture() {
-		resp, err := msg.GetPicture()
-		text = "[Picture]"
-		if err == nil {
-			length := resp.ContentLength
-			buf := make([]byte, length)
-			buf, err := ioutil.ReadAll(resp.Body)
-			if err == nil {
-				filename := fmt.Sprintf("%v.jpg", time.Now().UnixNano())
-				err := ioutil.WriteFile(filename, buf, 0666)
-				if err != nil {
-					fmt.Println("write file err:", err)
-				}
-			}
-		}
-	}
-	fmt.Println(fmt.Sprintf("%s%s", prefix, text))
+	h.StoreMessage(msg)
 }
 
 func SyncCheckCallback(resp client.SyncCheckResponse) {
@@ -48,27 +39,58 @@ func SyncCheckCallback(resp client.SyncCheckResponse) {
 	}
 }
 
+var app *cli.App
+var h *helper.Helper
+
+func mainLoop() {
+	for {
+		select {
+		case <-h.Done():
+		default:
+			fmt.Print("> ")
+			command, err := bufio.NewReader(os.Stdin).ReadString(';')
+			if err != nil {
+				panic(err)
+			}
+			command = fmt.Sprintf("# %s", strings.TrimRight(command, ";"))
+			execute(command)
+		}
+	}
+}
+
+func execute(command string) {
+	args := strings.Split(command, " ")
+	if err := app.Run(args); err != nil {
+		fmt.Println(err.Error())
+	}
+}
+
 func main() {
-	bot := client.DefaultBot(client.Desktop)
+	cfg := &helper.Config{
+		StorageFileName: "storage.json",
+	}
+	h = helper.NewHelper(cfg)
+	h.BindSyncCheckCallback(SyncCheckCallback)
+	h.BindUUIDCallback(ConsoleQrCode)
+	h.BindScanCallBack(ScanCallback)
+	h.BindLoginCallBack(LoginCallback)
+	h.BindMessageHandler(MessageHandler)
 
-	bot.MessageHandler = MessageHandler
-	bot.UUIDCallback = ConsoleQrCode
-	bot.SyncCheckCallback = SyncCheckCallback
-
-	reloadStorage := client.NewJsonFileHotReloadStorage("storage.json")
-
-	if err := bot.HotLogin(reloadStorage); err != nil {
+	if err := h.HotLogin(); err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	self, err := bot.GetCurrentUser()
-	if err != nil {
-		fmt.Println(err)
-		return
+	app = &cli.App{
+		Name:            "wx-cli",
+		CommandNotFound: cmd.FallbackFunc,
 	}
-	fmt.Println("Welcome,", self.NickName)
-	fmt.Println(self.Alias)
-	fmt.Println(self.DisplayName)
-	_ = bot.Block()
+	cmd.Init(h)
+	app.Commands = cmd.CliCommands
+
+	username := h.GetCurrentUserName()
+
+	fmt.Println("Welcome,", username)
+
+	mainLoop()
 }

@@ -72,8 +72,6 @@ func (m *Message) SenderInGroup() (*User, error) {
 	if !m.IsComeFromGroup() {
 		return nil, errors.New("message is not from group")
 	}
-	// 拍一拍系列的系统消息
-	// https://github.com/eatmoreapple/openwechat/issues/66
 	if m.IsSystem() {
 		// 判断是否有自己发送
 		if m.FromUserName == m.Bot.self.User.UserName {
@@ -120,6 +118,7 @@ func (m *Message) Receiver() (*User, error) {
 		if users.Count() == 0 {
 			return nil, ErrNoSuchUserFoundError
 		}
+		// todo: find in m.Bot.Storage.Response.ContactList
 		return users.First().User, nil
 	} else if m.ToUserName == m.Bot.self.UserName {
 		return m.Bot.self.User, nil
@@ -717,12 +716,6 @@ func (m *Message) IsAt() bool {
 	return m.isAt
 }
 
-// IsPaiYiPai 判断消息是否为拍一拍
-// 不要问我为什么取名为PaiYiPai，因为我也不知道取啥名字好
-func (m *Message) IsPaiYiPai() bool {
-	return m.IsSystem() && strings.Contains(m.Content, "拍了拍")
-}
-
 // IsJoinGroup 判断是否有人加入了群聊
 func (m *Message) IsJoinGroup() bool {
 	return m.IsSystem() && strings.Contains(m.Content, "加入了群聊") && m.IsSendByGroup()
@@ -730,5 +723,5 @@ func (m *Message) IsJoinGroup() bool {
 
 // IsTickled 判断消息是否为拍一拍
 func (m *Message) IsTickled() bool {
-	return m.IsPaiYiPai()
+	return m.IsSystem() && strings.Contains(m.Content, "拍了拍")
 }
