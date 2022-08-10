@@ -205,6 +205,10 @@ func (b *Bot) WebInit() error {
 	b.self.formatEmoji()
 	b.self.Self = b.self
 	b.Storage.Response = resp
+	for _, user := range resp.ContactList {
+		u := user
+		b.Storage.ContactMap[u.UserName] = &Contact{User: &u}
+	}
 
 	// 通知手机客户端已经登录
 	if err = b.Caller.WebWxStatusNotify(req, resp, info); err != nil {
@@ -293,6 +297,17 @@ func (b *Bot) syncMessage() ([]*Message, error) {
 	}
 	// 更新SyncKey并且重新存入storage
 	b.Storage.Response.SyncKey = resp.SyncKey
+	modContactList := resp.ModContactList
+	delContactList := resp.DelContactList
+
+	for _, modContact := range modContactList {
+		c := *modContact
+		b.Storage.ContactMap[modContact.UserName] = &c
+	}
+
+	for _, delContact := range delContactList {
+		delete(b.Storage.ContactMap, delContact.UserName)
+	}
 	return resp.AddMsgList, nil
 }
 

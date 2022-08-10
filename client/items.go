@@ -110,17 +110,19 @@ func (s SyncCheckResponse) Error() string {
 }
 
 type WebWxSyncResponse struct {
-	AddMsgCount            int
 	ContinueFlag           int
-	DelContactCount        int
+	AddMsgCount            int
 	ModChatRoomMemberCount int
 	ModContactCount        int
+	DelContactCount        int
 	Skey                   string
 	SyncCheckKey           SyncKey
 	SyncKey                SyncKey
 	BaseResponse           BaseResponse
-	ModChatRoomMemberList  Members
 	AddMsgList             []*Message
+	ModChatRoomMemberList  Members
+	ModContactList         Contacts
+	DelContactList         Contacts
 }
 
 type WebWxContactResponse struct {
