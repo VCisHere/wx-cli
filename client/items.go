@@ -121,8 +121,8 @@ type WebWxSyncResponse struct {
 	BaseResponse           BaseResponse
 	AddMsgList             []*Message
 	ModChatRoomMemberList  Members
-	ModContactList         Contacts
-	DelContactList         Contacts
+	ModContactList         []*User
+	DelContactList         []*User
 }
 
 type WebWxContactResponse struct {

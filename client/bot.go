@@ -201,13 +201,18 @@ func (b *Bot) WebInit() error {
 		return err
 	}
 	// 设置当前的用户
-	b.self = &Self{Bot: b, User: &resp.User}
+	b.self = &Self{
+		Bot:        b,
+		User:       &resp.User,
+		ContactMap: map[string]*User{},
+	}
 	b.self.formatEmoji()
 	b.self.Self = b.self
 	b.Storage.Response = resp
 	for _, user := range resp.ContactList {
 		u := user
-		b.Storage.ContactMap[u.UserName] = &Contact{User: &u}
+		u.formatEmoji()
+		b.self.ContactMap[u.UserName] = &u
 	}
 
 	// 通知手机客户端已经登录
@@ -302,11 +307,11 @@ func (b *Bot) syncMessage() ([]*Message, error) {
 
 	for _, modContact := range modContactList {
 		c := *modContact
-		b.Storage.ContactMap[modContact.UserName] = &c
+		b.self.ContactMap[modContact.UserName] = &c
 	}
 
 	for _, delContact := range delContactList {
-		delete(b.Storage.ContactMap, delContact.UserName)
+		delete(b.self.ContactMap, delContact.UserName)
 	}
 	return resp.AddMsgList, nil
 }

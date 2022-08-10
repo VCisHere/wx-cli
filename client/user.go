@@ -158,8 +158,16 @@ type Self struct {
 	members    Members
 	friends    Friends
 	groups     Groups
-	contacts   Contacts
+	ContactMap map[string]*User
 	mps        Mps
+}
+
+func (s *Self) FindContactByUserName(username string) (*User, bool) {
+	u, ok := s.ContactMap[username]
+	if !ok {
+		return nil, false
+	}
+	return u, true
 }
 
 // Members 获取所有的好友、群组、公众号信息
@@ -174,13 +182,6 @@ func (s *Self) Members(update ...bool) (Members, error) {
 	return s.members, nil
 }
 
-func (s *Self) Contacts() (Contacts, error) {
-	if err := s.updateContacts(); err != nil {
-		return nil, err
-	}
-	return s.contacts, nil
-}
-
 // 更新联系人处理
 func (s *Self) updateMembers() error {
 	info := s.Bot.Storage.LoginInfo
@@ -190,18 +191,6 @@ func (s *Self) updateMembers() error {
 	}
 	members.init(s)
 	s.members = members
-	return nil
-}
-
-func (s *Self) updateContacts() error {
-	s.contacts = make(Contacts, 0)
-	for _, user := range s.Bot.Storage.Response.ContactList {
-		u := user
-		contact := &Contact{
-			User: &u,
-		}
-		s.contacts = append(s.contacts, contact)
-	}
 	return nil
 }
 

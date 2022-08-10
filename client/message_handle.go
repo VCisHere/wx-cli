@@ -177,7 +177,7 @@ func (m *MessageMatchDispatcher) OnMedia(handlers ...MessageContextHandler) {
 // OnFriendByNickName 注册根据好友昵称是否匹配的消息处理函数
 func (m *MessageMatchDispatcher) OnFriendByNickName(nickName string, handlers ...MessageContextHandler) {
 	matchFunc := func(message *Message) bool {
-		if message.IsSendByFriend() {
+		if message.Category == CategoryFriend {
 			sender, err := message.Sender()
 			return err == nil && sender.NickName == nickName
 		}
@@ -188,12 +188,12 @@ func (m *MessageMatchDispatcher) OnFriendByNickName(nickName string, handlers ..
 
 // OnFriend 注册发送者为好友的处理函数
 func (m *MessageMatchDispatcher) OnFriend(handlers ...MessageContextHandler) {
-	m.RegisterHandler(func(message *Message) bool { return message.IsSendByFriend() }, handlers...)
+	m.RegisterHandler(func(message *Message) bool { return message.Category == CategoryFriend }, handlers...)
 }
 
 // OnGroup 注册发送者为群组的处理函数
 func (m *MessageMatchDispatcher) OnGroup(handlers ...MessageContextHandler) {
-	m.RegisterHandler(func(message *Message) bool { return message.IsSendByGroup() }, handlers...)
+	m.RegisterHandler(func(message *Message) bool { return message.Category == CategoryFriend }, handlers...)
 }
 
 // OnUser 注册根据消息发送者的行为是否匹配的消息处理函数

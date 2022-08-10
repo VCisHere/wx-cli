@@ -61,7 +61,10 @@ func (h *Helper) GetCurrentUserName() string {
 	return h.self.NickName
 }
 
-func (h *Helper) GetUserName(user *client.User) string {
+func (h *Helper) GetName(user *client.User) string {
+	if user == nil {
+		return "Unknown"
+	}
 	name := user.RemarkName
 	if len(name) == 0 {
 		name = user.NickName
@@ -76,7 +79,7 @@ func (h *Helper) GetFriendsName() ([]string, error) {
 	}
 	names := make([]string, len(friends))
 	for i := range names {
-		names[i] = h.GetUserName(friends[i].User)
+		names[i] = h.GetName(friends[i].User)
 	}
 	return names, nil
 }
@@ -102,11 +105,9 @@ func (h *Helper) MessageToString(msg *client.Message) string {
 	var senderText string
 	var receiverText string
 	var err error
-	needSenderText := true
-	needReceiverText := true
+
 	sender, err := msg.Sender()
 	if err != nil {
-		needSenderText = false
 		senderText = "[Unknown]"
 		fmt.Println(err)
 	} else {
@@ -114,35 +115,38 @@ func (h *Helper) MessageToString(msg *client.Message) string {
 	}
 	receiver, err := msg.Receiver()
 	if err != nil {
-		needReceiverText = false
 		receiverText = "[Unknown]"
 		fmt.Println(err)
 	} else {
 		fmt.Println("Receiver:", receiver.NickName)
 	}
 
-	if needSenderText && needReceiverText {
-		if sender.IsGroup() || receiver.IsGroup() {
-			msgType = "G"
-			senderInGroup, err := msg.SenderInGroup()
-			if err != nil {
-				if errors.Is(err, client.ErrMsgIsFromSys) {
-					senderText = fmt.Sprintf("[%s][System]", h.GetUserName(sender))
-				} else {
-					senderText = fmt.Sprintf("[Unknown][System]")
-				}
+	switch msg.Category {
+	case client.CategoryUnknown:
+		senderText = "[Unknown]"
+	case client.CategorySystem:
+		msgType = "S"
+		senderText = "[System]"
+	case client.CategoryFriend:
+		msgType = "F"
+		senderText = fmt.Sprintf("[%s]->", h.GetName(sender))
+		receiverText = fmt.Sprintf("[%s]", h.GetName(receiver))
+	case client.CategoryGroup:
+		msgType = "G"
+		senderInGroup, err := msg.SenderInGroup()
+		if err != nil {
+			if errors.Is(err, client.ErrMsgIsFromSys) {
+				senderText = fmt.Sprintf("[%s][System]", h.GetName(sender))
 			} else {
-				senderText = fmt.Sprintf("[%s][%s]", h.GetUserName(receiver), h.GetUserName(senderInGroup))
+				senderText = fmt.Sprintf("[Unknown][System]")
 			}
-		} else if sender.IsFriend() && receiver.IsFriend() {
-			msgType = "F"
-			senderText = fmt.Sprintf("[%s]->", h.GetUserName(sender))
-			receiverText = fmt.Sprintf("[%s]", h.GetUserName(receiver))
-		} else if sender.IsMP() || receiver.IsMP() {
-			msgType = "P"
-			senderText = fmt.Sprintf("[%s]->", h.GetUserName(sender))
-			receiverText = fmt.Sprintf("[%s]", h.GetUserName(receiver))
+		} else {
+			senderText = fmt.Sprintf("[%s][%s]", h.GetName(receiver), h.GetName(senderInGroup))
 		}
+	case client.CategoryMP:
+		msgType = "P"
+		senderText = fmt.Sprintf("[%s]->", h.GetName(sender))
+		receiverText = fmt.Sprintf("[%s]", h.GetName(receiver))
 	}
 
 	createTime := msg.CreateTime

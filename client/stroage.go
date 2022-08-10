@@ -13,8 +13,6 @@ type Storage struct {
 	LoginInfo *LoginInfo
 	Request   *BaseRequest
 	Response  *WebInitResponse
-	// UserName -> Contact
-	ContactMap map[string]*Contact
 }
 
 type HotReloadStorageItem struct {

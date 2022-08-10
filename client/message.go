@@ -60,6 +60,8 @@ type Message struct {
 	item                  map[string]interface{}
 	Raw                   []byte `json:"-"`
 	RawContent            string `json:"-"` // 消息原始内容
+
+	Category MessageCategory
 }
 
 // Sender 获取消息的发送者
@@ -74,9 +76,6 @@ func (m *Message) Sender() (*User, error) {
 
 // SenderInGroup 获取消息在群里面的发送者
 func (m *Message) SenderInGroup() (*User, error) {
-	if !m.IsComeFromGroup() {
-		return nil, errors.New("message is not from group")
-	}
 	if m.IsSystem() {
 		// 判断是否有自己发送
 		if m.FromUserName == m.Bot.self.User.UserName {
@@ -107,19 +106,18 @@ func (m *Message) SenderInGroup() (*User, error) {
 // 如果消息是好友消息，则返回好友
 // 如果消息是系统消息，则返回当前用户
 func (m *Message) Receiver() (*User, error) {
-	if m.IsSystem() {
+	if m.ToUserName == m.Bot.self.UserName {
 		return m.Bot.self.User, nil
 	}
-	// todo: find in m.Bot.Storage.Response.ContactList
-	username := m.ToUserName
-	contacts, err := m.Bot.self.Contacts()
-	if err == nil {
-		users := contacts.SearchByUserName(1, username)
-		if users.Count() > 0 {
-			return users.First().User, nil
-		}
+	if m.Category == CategorySystem {
+		return m.Bot.self.User, nil
 	}
-	if m.IsSendByGroup() {
+	username := m.ToUserName
+	user, ok := m.Bot.self.FindContactByUserName(username)
+	if ok {
+		return user, nil
+	}
+	if m.Category == CategoryGroup {
 		groups, err := m.Bot.self.Groups()
 		if err != nil {
 			return nil, err
@@ -129,30 +127,21 @@ func (m *Message) Receiver() (*User, error) {
 			return nil, ErrNoSuchUserFoundError
 		}
 		return users.First().User, nil
-	} else if m.ToUserName == m.Bot.self.UserName {
-		return m.Bot.self.User, nil
-	} else {
-		user, exist := m.Bot.self.MemberList.GetByRemarkName(m.ToUserName)
-		if !exist {
-			return nil, ErrNoSuchUserFoundError
-		}
+	}
+
+	user, exist := m.Bot.self.MemberList.GetByUserName(m.ToUserName)
+	if exist {
 		return user, nil
 	}
+
+	user = &User{Self: m.Bot.self, UserName: m.ToUserName}
+	err := user.Detail()
+	return user, err
 }
 
 // IsSendBySelf 判断消息是否由自己发送
 func (m *Message) IsSendBySelf() bool {
 	return m.FromUserName == m.Bot.self.User.UserName
-}
-
-// IsSendByFriend 判断消息是否由好友发送
-func (m *Message) IsSendByFriend() bool {
-	return !m.IsSendByGroup() && strings.HasPrefix(m.FromUserName, "@") && !m.IsSendBySelf()
-}
-
-// IsSendByGroup 判断消息是否由群组发送
-func (m *Message) IsSendByGroup() bool {
-	return strings.HasPrefix(m.FromUserName, "@@") || (m.IsSendBySelf() && strings.HasPrefix(m.ToUserName, "@@"))
 }
 
 // ReplyText 回复文本消息
@@ -399,6 +388,37 @@ func (m *Message) Get(key string) (value interface{}, exist bool) {
 	return
 }
 
+func (m *Message) initMessageCategory() {
+	if strings.HasPrefix(m.FromUserName, "@@") || strings.HasPrefix(m.ToUserName, "@@") {
+		m.Category = CategoryGroup
+		return
+	}
+	if m.IsSystem() {
+		m.Category = CategorySystem
+		return
+	}
+	var err error
+	sender, err := m.Sender()
+	if err != nil {
+		m.Category = CategoryUnknown
+		return
+	}
+	if sender.IsMP() {
+		m.Category = CategoryMP
+		return
+	}
+	receiver, err := m.Receiver()
+	if err != nil {
+		m.Category = CategoryUnknown
+		return
+	}
+	if receiver.IsMP() {
+		m.Category = CategoryMP
+		return
+	}
+	m.Category = CategoryFriend
+}
+
 // 消息初始化,根据不同的消息作出不同的处理
 func (m *Message) init(bot *Bot) {
 	m.Bot = bot
@@ -406,7 +426,7 @@ func (m *Message) init(bot *Bot) {
 	m.Raw = raw
 	m.RawContent = m.Content
 	// 如果是群消息
-	if m.IsSendByGroup() {
+	if strings.HasPrefix(m.FromUserName, "@@") || strings.HasPrefix(m.ToUserName, "@@") {
 		if !m.IsSystem() {
 			// 将Username和正文分开
 			if !m.IsSendBySelf() {
@@ -444,6 +464,8 @@ func (m *Message) init(bot *Bot) {
 	m.Content = html.UnescapeString(m.Content)
 	// 处理消息中的emoji表情
 	m.Content = FormatEmoji(m.Content)
+
+	m.initMessageCategory()
 }
 
 // SendMessage 发送消息的结构体
@@ -710,12 +732,6 @@ func (a AppMessageData) IsFile() bool {
 	return a.AppMsg.Type == AppMsgTypeAttach
 }
 
-// IsComeFromGroup 判断消息是否来自群组
-// 可能是自己或者别的群员发送
-func (m *Message) IsComeFromGroup() bool {
-	return m.IsSendByGroup() || (strings.HasPrefix(m.ToUserName, "@@") && m.IsSendBySelf())
-}
-
 func (m *Message) String() string {
 	return fmt.Sprintf("<%s:%s>", m.MsgType, m.MsgId)
 }
@@ -723,11 +739,6 @@ func (m *Message) String() string {
 // IsAt 判断消息是否为@消息
 func (m *Message) IsAt() bool {
 	return m.isAt
-}
-
-// IsJoinGroup 判断是否有人加入了群聊
-func (m *Message) IsJoinGroup() bool {
-	return m.IsSystem() && strings.Contains(m.Content, "加入了群聊") && m.IsSendByGroup()
 }
 
 // IsTickled 判断消息是否为拍一拍
