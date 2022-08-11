@@ -17,11 +17,11 @@ func HandleMessage(msg *client.Message) string {
 		text = handleArticle(msg)
 	} else if msg.IsTickled() {
 
+	} else if msg.IsEmoticon() {
+		text = "[Emotion]"
 	} else if msg.IsSystem() {
 		text = handleText(msg)
 	}
-	sender, _ := msg.Sender()
-	sender.IsFriend()
 	return text
 }
 

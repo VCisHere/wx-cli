@@ -131,6 +131,7 @@ func (c *Caller) WebWxStatusNotify(request *BaseRequest, response *WebInitRespon
 }
 
 // SyncCheck 异步获取是否有新的消息
+// todo: review
 func (c *Caller) SyncCheck(request *BaseRequest, info *LoginInfo, response *WebInitResponse) (*SyncCheckResponse, error) {
 	resp, err := c.Client.SyncCheck(request, info, response)
 	if err != nil {

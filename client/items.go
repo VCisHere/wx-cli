@@ -100,6 +100,10 @@ func (s SyncCheckResponse) NorMal() bool {
 	return s.Success() && s.Selector == "0"
 }
 
+func (s SyncCheckResponse) HasNewMsg() bool {
+	return s.Success() && s.Selector == "2"
+}
+
 // 实现error接口
 func (s SyncCheckResponse) Error() string {
 	i, err := strconv.ParseInt(s.RetCode, 16, 10)

@@ -255,8 +255,8 @@ func (b *Bot) syncCheck() error {
 		if !resp.Success() {
 			return resp
 		}
-		// 如果Selector不为0，则获取消息
-		if !resp.NorMal() {
+		// 如果Selector为2，则获取消息
+		if resp.HasNewMsg() {
 			messages, err := b.syncMessage()
 			if err != nil {
 				return err
