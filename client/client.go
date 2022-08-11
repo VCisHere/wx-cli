@@ -277,25 +277,25 @@ func (c *Client) WebWxSendMsg(msg *SendMessage, info *LoginInfo, request *BaseRe
 	return c.sendMessage(request, path.String(), msg)
 }
 
-// WebWxGetHeadImg 获取用户的头像
-func (c *Client) WebWxGetHeadImg(user *User) (*http.Response, error) {
-	var path string
-	if user.HeadImgUrl != "" {
-		path = c.Domain.BaseHost() + user.HeadImgUrl
-	} else {
-		params := url.Values{}
-		params.Add("username", user.UserName)
-		params.Add("skey", user.Self.Bot.Storage.Request.Skey)
-		params.Add("type", "big")
-		params.Add("chatroomid", user.EncryChatRoomId)
-		params.Add("seq", "0")
-		URL, _ := url.Parse(c.Domain.BaseHost() + webwxgeticon)
-		URL.RawQuery = params.Encode()
-		path = URL.String()
-	}
-	req, _ := http.NewRequest(http.MethodGet, path, nil)
-	return c.Do(req)
-}
+//// WebWxGetHeadImg 获取用户的头像
+//func (c *Client) WebWxGetHeadImg(user *User) (*http.Response, error) {
+//	var path string
+//	if user.HeadImgUrl != "" {
+//		path = c.Domain.BaseHost() + user.HeadImgUrl
+//	} else {
+//		params := url.Values{}
+//		params.Add("username", user.UserName)
+//		params.Add("skey", user.Self.Bot.Storage.Request.Skey)
+//		params.Add("type", "big")
+//		params.Add("chatroomid", user.EncryChatRoomId)
+//		params.Add("seq", "0")
+//		URL, _ := url.Parse(c.Domain.BaseHost() + webwxgeticon)
+//		URL.RawQuery = params.Encode()
+//		path = URL.String()
+//	}
+//	req, _ := http.NewRequest(http.MethodGet, path, nil)
+//	return c.Do(req)
+//}
 
 func (c *Client) WebWxUploadMediaByChunk(file *os.File, request *BaseRequest, info *LoginInfo, forUserName, toUserName string) (*http.Response, error) {
 	// 获取文件上传的类型

@@ -61,7 +61,13 @@ type Message struct {
 	Raw                   []byte `json:"-"`
 	RawContent            string `json:"-"` // 消息原始内容
 
+	MessagePersistence
+}
+
+type MessagePersistence struct {
 	Category MessageCategory
+	FromUin  int64
+	ToUin    int64
 }
 
 // Sender 获取消息的发送者
@@ -69,8 +75,8 @@ func (m *Message) Sender() (*User, error) {
 	if m.FromUserName == m.Bot.self.User.UserName {
 		return m.Bot.self.User, nil
 	}
-	user := &User{Self: m.Bot.self, UserName: m.FromUserName}
-	err := user.Detail()
+	user := &User{UserName: m.FromUserName}
+	err := user.Detail(m.Bot.self)
 	return user, err
 }
 
@@ -87,7 +93,7 @@ func (m *Message) SenderInGroup() (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := group.Detail(); err != nil {
+	if err := group.Detail(m.Bot.self); err != nil {
 		return nil, err
 	}
 	if group.IsFriend() {
@@ -97,7 +103,7 @@ func (m *Message) SenderInGroup() (*User, error) {
 	if users == nil {
 		return nil, ErrNoSuchUserFoundError
 	}
-	users.init(m.Bot.self)
+	users.init()
 	return users.First(), nil
 }
 
@@ -117,16 +123,16 @@ func (m *Message) Receiver() (*User, error) {
 	if ok {
 		return user, nil
 	}
+
 	if m.Category == CategoryGroup {
 		groups, err := m.Bot.self.Groups()
 		if err != nil {
 			return nil, err
 		}
 		users := groups.SearchByUserName(1, username)
-		if users.Count() == 0 {
-			return nil, ErrNoSuchUserFoundError
+		if users.Count() > 0 {
+			return users.First().User, nil
 		}
-		return users.First().User, nil
 	}
 
 	user, exist := m.Bot.self.MemberList.GetByUserName(m.ToUserName)
@@ -134,8 +140,8 @@ func (m *Message) Receiver() (*User, error) {
 		return user, nil
 	}
 
-	user = &User{Self: m.Bot.self, UserName: m.ToUserName}
-	err := user.Detail()
+	user = &User{UserName: m.ToUserName}
+	err := user.Detail(m.Bot.self)
 	return user, err
 }
 
@@ -388,7 +394,21 @@ func (m *Message) Get(key string) (value interface{}, exist bool) {
 	return
 }
 
-func (m *Message) initMessageCategory() {
+func (m *Message) initPersistence() {
+	sender, err := m.Sender()
+	if err == nil {
+		m.FromUin = sender.Uin
+	}
+	receiver, err := m.Receiver()
+	if err == nil {
+		m.ToUin = receiver.Uin
+	}
+
+	m.initMessageCategory(sender, receiver)
+
+}
+
+func (m *Message) initMessageCategory(sender *User, receiver *User) {
 	if strings.HasPrefix(m.FromUserName, "@@") || strings.HasPrefix(m.ToUserName, "@@") {
 		m.Category = CategoryGroup
 		return
@@ -397,22 +417,11 @@ func (m *Message) initMessageCategory() {
 		m.Category = CategorySystem
 		return
 	}
-	var err error
-	sender, err := m.Sender()
-	if err != nil {
+	if sender == nil || receiver == nil {
 		m.Category = CategoryUnknown
 		return
 	}
-	if sender.IsMP() {
-		m.Category = CategoryMP
-		return
-	}
-	receiver, err := m.Receiver()
-	if err != nil {
-		m.Category = CategoryUnknown
-		return
-	}
-	if receiver.IsMP() {
+	if sender.IsMP() || receiver.IsMP() {
 		m.Category = CategoryMP
 		return
 	}
@@ -465,7 +474,7 @@ func (m *Message) init(bot *Bot) {
 	// 处理消息中的emoji表情
 	m.Content = FormatEmoji(m.Content)
 
-	m.initMessageCategory()
+	m.initPersistence()
 }
 
 // SendMessage 发送消息的结构体

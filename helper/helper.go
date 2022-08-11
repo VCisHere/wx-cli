@@ -3,6 +3,7 @@ package helper
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"wx-cli/client"
 	"wx-cli/storage"
 	"wx-cli/util"
@@ -13,7 +14,7 @@ type Helper struct {
 	self  *client.Self
 	cfg   *Config
 	to    *client.User
-	cache *storage.MsgCache
+	cache *storage.Cache
 }
 
 type Config struct {
@@ -22,9 +23,8 @@ type Config struct {
 
 func NewHelper(cfg *Config) *Helper {
 	return &Helper{
-		bot:   client.NewBot(client.Desktop),
-		cfg:   cfg,
-		cache: storage.NewMsgCache(),
+		bot: client.NewBot(client.Desktop),
+		cfg: cfg,
 	}
 }
 
@@ -49,12 +49,26 @@ func (h *Helper) BindMessageHandler(f func(msg *client.Message)) {
 }
 
 func (h *Helper) HotLogin() error {
+	var err error
 	reloadStorage := client.NewJsonFileHotReloadStorage(h.cfg.StorageFileName)
-	err := h.bot.HotLogin(reloadStorage)
-	if err == nil {
-		h.self, _ = h.bot.GetCurrentUser()
+	err = h.bot.HotLogin(reloadStorage)
+	if err != nil {
+		return err
 	}
-	return err
+
+	h.self, _ = h.bot.GetCurrentUser()
+	uin := h.bot.Storage.Response.User.Uin
+	filePath := fmt.Sprintf("%s/%s", util.GetCurrentPath(), strconv.FormatInt(uin, 10))
+	h.cache, err = storage.NewCacheFromFile(filePath)
+	if err == nil {
+		return nil
+	}
+	h.cache = storage.NewCache(filePath)
+	_, err = h.self.Members()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (h *Helper) GetCurrentUserName() string {
@@ -65,11 +79,13 @@ func (h *Helper) GetName(user *client.User) string {
 	if user == nil {
 		return "Unknown"
 	}
-	name := user.RemarkName
-	if len(name) == 0 {
-		name = user.NickName
+	if len(user.DisplayName) > 0 {
+		return user.DisplayName
 	}
-	return name
+	if len(user.RemarkName) > 0 {
+		return user.RemarkName
+	}
+	return user.NickName
 }
 
 func (h *Helper) GetFriendsName() ([]string, error) {
@@ -97,7 +113,7 @@ func (h *Helper) StoreMessage(msg *client.Message) {
 }
 
 func (h *Helper) Messages() storage.Messages {
-	return h.cache.Messages()
+	return h.cache.Messages
 }
 
 func (h *Helper) MessageToString(msg *client.Message) string {
@@ -110,15 +126,11 @@ func (h *Helper) MessageToString(msg *client.Message) string {
 	if err != nil {
 		senderText = "[Unknown]"
 		fmt.Println(err)
-	} else {
-		fmt.Println("Sender:", sender.NickName)
 	}
 	receiver, err := msg.Receiver()
 	if err != nil {
 		receiverText = "[Unknown]"
 		fmt.Println(err)
-	} else {
-		fmt.Println("Receiver:", receiver.NickName)
 	}
 
 	switch msg.Category {
@@ -141,7 +153,11 @@ func (h *Helper) MessageToString(msg *client.Message) string {
 				senderText = fmt.Sprintf("[Unknown][System]")
 			}
 		} else {
-			senderText = fmt.Sprintf("[%s][%s]", h.GetName(receiver), h.GetName(senderInGroup))
+			if msg.IsSendBySelf() {
+				senderText = fmt.Sprintf("[%s][%s]", h.GetName(receiver), h.GetName(senderInGroup))
+			} else {
+				senderText = fmt.Sprintf("[%s][%s]", h.GetName(sender), h.GetName(senderInGroup))
+			}
 		}
 	case client.CategoryMP:
 		msgType = "P"

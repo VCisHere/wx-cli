@@ -2,8 +2,6 @@ package client
 
 import (
 	"fmt"
-	"os"
-	"time"
 )
 
 type Friend struct {
@@ -13,36 +11,6 @@ type Friend struct {
 // implement fmt.Stringer
 func (f Friend) String() string {
 	return fmt.Sprintf("<Friend:%s>", f.NickName)
-}
-
-// SetRemarkName 重命名当前好友
-func (f *Friend) SetRemarkName(name string) error {
-	return f.Self.SetRemarkNameToFriend(f, name)
-}
-
-// SendText  发送文本消息
-func (f *Friend) SendText(content string) (*SentMessage, error) {
-	return f.Self.SendTextToFriend(f, content)
-}
-
-// SendImage 发送图片消息
-func (f *Friend) SendImage(file *os.File) (*SentMessage, error) {
-	return f.Self.SendImageToFriend(f, file)
-}
-
-// SendVideo 发送视频消息
-func (f *Friend) SendVideo(file *os.File) (*SentMessage, error) {
-	return f.Self.SendVideoToFriend(f, file)
-}
-
-// SendFile 发送文件消息
-func (f *Friend) SendFile(file *os.File) (*SentMessage, error) {
-	return f.Self.SendFileToFriend(f, file)
-}
-
-// AddIntoGroup 拉该好友入群
-func (f *Friend) AddIntoGroup(groups ...*Group) error {
-	return f.Self.AddFriendIntoManyGroups(f, groups...)
 }
 
 type Friends []*Friend
@@ -108,125 +76,17 @@ func (f Friends) Search(limit int, condFuncList ...func(friend *Friend) bool) (r
 	return
 }
 
-// SendText 向slice的好友依次发送文本消息
-func (f Friends) SendText(text string, delay ...time.Duration) error {
-	total := getTotalDuration(delay...)
-	var (
-		sentMessage *SentMessage
-		err         error
-		self        *Self
-	)
-	for _, friend := range f {
-		self = friend.Self
-		time.Sleep(total)
-		if sentMessage != nil {
-			err = self.ForwardMessageToFriends(sentMessage, f...)
-			return err
-		}
-		if sentMessage, err = friend.SendText(text); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// SendImage 向slice的好友依次发送图片消息
-func (f Friends) SendImage(file *os.File, delay ...time.Duration) error {
-	total := getTotalDuration(delay...)
-	var (
-		sentMessage *SentMessage
-		err         error
-		self        *Self
-	)
-	for _, friend := range f {
-		self = friend.Self
-		time.Sleep(total)
-		if sentMessage != nil {
-			err = self.ForwardMessageToFriends(sentMessage, f...)
-			return err
-		}
-		if sentMessage, err = friend.SendImage(file); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// SendFile 群发文件
-func (f Friends) SendFile(file *os.File, delay ...time.Duration) error {
-	total := getTotalDuration(delay...)
-	var (
-		sentMessage *SentMessage
-		err         error
-		self        *Self
-	)
-	for _, friend := range f {
-		self = friend.Self
-		time.Sleep(total)
-		if sentMessage != nil {
-			err = self.ForwardMessageToFriends(sentMessage, f...)
-			return err
-		}
-		if sentMessage, err = friend.SendFile(file); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 type Group struct {
 	*User
 }
 
-// implement fmt.Stringer
-func (g Group) String() string {
-	return fmt.Sprintf("<Group:%s>", g.NickName)
-}
-
-// SendText 发行文本消息给当前的群组
-func (g *Group) SendText(content string) (*SentMessage, error) {
-	return g.Self.SendTextToGroup(g, content)
-}
-
-// SendImage 发行图片消息给当前的群组
-func (g *Group) SendImage(file *os.File) (*SentMessage, error) {
-	return g.Self.SendImageToGroup(g, file)
-}
-
-// SendVideo 发行视频消息给当前的群组
-func (g *Group) SendVideo(file *os.File) (*SentMessage, error) {
-	return g.Self.SendVideoToGroup(g, file)
-}
-
-// SendFile 发送文件给当前的群组
-func (g *Group) SendFile(file *os.File) (*SentMessage, error) {
-	return g.Self.SendFileToGroup(g, file)
-}
-
 // Members 获取所有的群成员
-func (g *Group) Members() (Members, error) {
-	if err := g.Detail(); err != nil {
+func (g *Group) Members(self *Self) (Members, error) {
+	if err := g.Detail(self); err != nil {
 		return nil, err
 	}
-	g.MemberList.init(g.Self)
+	g.MemberList.init()
 	return g.MemberList, nil
-}
-
-// AddFriendsIn 拉好友入群
-func (g *Group) AddFriendsIn(friends ...*Friend) error {
-	return g.Self.AddFriendsIntoGroup(g, friends...)
-}
-
-// RemoveMembers 从群聊中移除用户
-// Deprecated
-// 无论是网页版，还是程序上都不起作用
-func (g *Group) RemoveMembers(members Members) error {
-	return g.Self.RemoveMemberFromGroup(g, members)
-}
-
-// Rename 群组重命名
-func (g *Group) Rename(name string) error {
-	return g.Self.RenameGroup(g, name)
 }
 
 type Groups []*Group
@@ -248,50 +108,6 @@ func (g Groups) First() *Group {
 func (g Groups) Last() *Group {
 	if g.Count() > 0 {
 		return g[g.Count()-1]
-	}
-	return nil
-}
-
-// SendText 向群组依次发送文本消息, 支持发送延迟
-func (g Groups) SendText(text string, delay ...time.Duration) error {
-	total := getTotalDuration(delay...)
-	var (
-		sentMessage *SentMessage
-		err         error
-		self        *Self
-	)
-	for _, group := range g {
-		self = group.Self
-		time.Sleep(total)
-		if sentMessage != nil {
-			err = self.ForwardMessageToGroups(sentMessage, g...)
-			return err
-		}
-		if sentMessage, err = group.SendText(text); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// SendImage 向群组依次发送图片消息, 支持发送延迟
-func (g Groups) SendImage(file *os.File, delay ...time.Duration) error {
-	total := getTotalDuration(delay...)
-	var (
-		sentMessage *SentMessage
-		err         error
-		self        *Self
-	)
-	for _, group := range g {
-		self = group.Self
-		time.Sleep(total)
-		if sentMessage != nil {
-			err = self.ForwardMessageToGroups(sentMessage, g...)
-			return err
-		}
-		if sentMessage, err = group.SendImage(file); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -404,21 +220,6 @@ func (m Mps) SearchByNickName(limit int, nickName string) (results Mps) {
 	return m.Search(limit, func(group *Mp) bool { return group.NickName == nickName })
 }
 
-// SendText 发送文本消息给公众号
-func (m *Mp) SendText(content string) (*SentMessage, error) {
-	return m.Self.SendTextToMp(m, content)
-}
-
-// SendImage 发送图片消息给公众号
-func (m *Mp) SendImage(file *os.File) (*SentMessage, error) {
-	return m.Self.SendImageToMp(m, file)
-}
-
-// SendFile 发送文件消息给公众号
-func (m *Mp) SendFile(file *os.File) (*SentMessage, error) {
-	return m.Self.SendFileToMp(m, file)
-}
-
 // GetByUsername 根据username查询一个Friend
 func (f Friends) GetByUsername(username string) *Friend {
 	return f.SearchByUserName(1, username).First()
@@ -457,8 +258,4 @@ func (m Mps) GetByNickName(nickname string) *Mp {
 // GetByUserName 根据username查询一个Mp
 func (m Mps) GetByUserName(username string) *Mp {
 	return m.SearchByUserName(1, username).First()
-}
-
-type Contact struct {
-	*User
 }

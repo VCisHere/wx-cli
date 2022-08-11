@@ -3,8 +3,6 @@ package client
 import (
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"strings"
 )
@@ -45,8 +43,6 @@ type User struct {
 	Signature         string
 
 	MemberList Members
-
-	Self *Self
 }
 
 // implement fmt.Stringer
@@ -54,60 +50,60 @@ func (u *User) String() string {
 	return fmt.Sprintf("<User:%s>", u.NickName)
 }
 
-// GetAvatarResponse 获取用户头像
-func (u *User) GetAvatarResponse() (*http.Response, error) {
-	return u.Self.Bot.Caller.Client.WebWxGetHeadImg(u)
-}
+//// GetAvatarResponse 获取用户头像
+//func (u *User) GetAvatarResponse() (*http.Response, error) {
+//	return u.Self.Bot.Caller.Client.WebWxGetHeadImg(u)
+//}
 
-// SaveAvatar 下载用户头像
-func (u *User) SaveAvatar(filename string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return u.SaveAvatarWithWriter(file)
-}
+//// SaveAvatar 下载用户头像
+//func (u *User) SaveAvatar(filename string) error {
+//	file, err := os.Create(filename)
+//	if err != nil {
+//		return err
+//	}
+//	defer file.Close()
+//	return u.SaveAvatarWithWriter(file)
+//}
 
-func (u *User) SaveAvatarWithWriter(writer io.Writer) error {
-	resp, err := u.GetAvatarResponse()
-	if err != nil {
-		return err
-	}
-	// 这里获取头像的响应有时可能会异常
-	// 一般为网路原因
-	// 再去请求一次即可解决
-	if resp.ContentLength == 0 && resp.Header.Get("Content-Type") == "image/jpeg" {
-		resp, err = u.GetAvatarResponse()
-		if err != nil {
-			return err
-		}
-	}
-	// 写文件前判断下 content length 是否是 0，不然保存的头像会出现
-	// image not loaded  try to open it externally to fix format problem 问题
-	if resp.ContentLength == 0 {
-		return fmt.Errorf("get avatar response content length is 0")
-	}
-	defer resp.Body.Close()
-	_, err = io.Copy(writer, resp.Body)
-	return err
-}
+//func (u *User) SaveAvatarWithWriter(writer io.Writer) error {
+//	resp, err := u.GetAvatarResponse()
+//	if err != nil {
+//		return err
+//	}
+//	// 这里获取头像的响应有时可能会异常
+//	// 一般为网路原因
+//	// 再去请求一次即可解决
+//	if resp.ContentLength == 0 && resp.Header.Get("Content-Type") == "image/jpeg" {
+//		resp, err = u.GetAvatarResponse()
+//		if err != nil {
+//			return err
+//		}
+//	}
+//	// 写文件前判断下 content length 是否是 0，不然保存的头像会出现
+//	// image not loaded  try to open it externally to fix format problem 问题
+//	if resp.ContentLength == 0 {
+//		return fmt.Errorf("get avatar response content length is 0")
+//	}
+//	defer resp.Body.Close()
+//	_, err = io.Copy(writer, resp.Body)
+//	return err
+//}
 
 // Detail 获取用户的详情
-func (u *User) Detail() error {
-	if u.UserName == u.Self.UserName {
+func (u *User) Detail(self *Self) error {
+	if u.UserName == self.UserName {
 		return nil
 	}
 	members := Members{u}
-	request := u.Self.Bot.Storage.Request
-	newMembers, err := u.Self.Bot.Caller.WebWxBatchGetContact(members, request)
+	request := self.Bot.Storage.Request
+	newMembers, err := self.Bot.Caller.WebWxBatchGetContact(members, request)
 	if err != nil {
 		return err
 	}
-	newMembers.init(u.Self)
+	newMembers.init()
 	user := newMembers.First()
 	*u = *user
-	u.MemberList.init(u.Self)
+	u.MemberList.init()
 	return nil
 }
 
@@ -126,17 +122,17 @@ func (u *User) IsMP() bool {
 	return u.VerifyFlag == 8 || u.VerifyFlag == 24 || u.VerifyFlag == 136
 }
 
-// Pin 将联系人置顶
-func (u *User) Pin() error {
-	req := u.Self.Bot.Storage.Request
-	return u.Self.Bot.Caller.WebWxRelationPin(req, u, 1)
-}
-
-// UnPin 将联系人取消置顶
-func (u *User) UnPin() error {
-	req := u.Self.Bot.Storage.Request
-	return u.Self.Bot.Caller.WebWxRelationPin(req, u, 0)
-}
+//// Pin 将联系人置顶
+//func (u *User) Pin() error {
+//	req := u.Self.Bot.Storage.Request
+//	return u.Self.Bot.Caller.WebWxRelationPin(req, u, 1)
+//}
+//
+//// UnPin 将联系人取消置顶
+//func (u *User) UnPin() error {
+//	req := u.Self.Bot.Storage.Request
+//	return u.Self.Bot.Caller.WebWxRelationPin(req, u, 0)
+//}
 
 // IsPin 判断当前联系人(好友、群组、公众号)是否为置顶状态
 func (u *User) IsPin() bool {
@@ -189,7 +185,7 @@ func (s *Self) updateMembers() error {
 	if err != nil {
 		return err
 	}
-	members.init(s)
+	members.init()
 	s.members = members
 	return nil
 }
@@ -207,7 +203,7 @@ func (s *Self) FileHelper() (*Friend, error) {
 	}
 	users := members.SearchByUserName(1, "filehelper")
 	if users == nil {
-		s.fileHelper = NewFriendHelper(s)
+		s.fileHelper = NewFriendHelper()
 	} else {
 		s.fileHelper = &Friend{users.First()}
 	}
@@ -328,8 +324,7 @@ func (s *Self) CreateGroup(topic string, friends ...*Friend) (*Group, error) {
 	if err != nil {
 		return nil, err
 	}
-	group.Self = s
-	err = group.Detail()
+	err = group.Detail(s)
 	return group, err
 }
 
@@ -340,7 +335,7 @@ func (s *Self) AddFriendsIntoGroup(group *Group, friends ...*Friend) error {
 		return nil
 	}
 	// 获取群的所有的群员
-	groupMembers, err := group.Members()
+	groupMembers, err := group.Members(s)
 	if err != nil {
 		return err
 	}
@@ -367,7 +362,7 @@ func (s *Self) RemoveMemberFromGroup(group *Group, members Members) error {
 	if group.IsOwner == 0 {
 		return errors.New("group owner required")
 	}
-	groupMembers, err := group.Members()
+	groupMembers, err := group.Members(s)
 	if err != nil {
 		return err
 	}
@@ -444,21 +439,21 @@ func (s *Self) forwardMessage(msg *SentMessage, users ...*User) error {
 		for _, user := range users {
 			msg.FromUserName = s.UserName
 			msg.ToUserName = user.UserName
-			_, err := s.Self.Bot.Caller.WebWxSendMsg(msg.SendMessage, info, req)
+			_, err := s.Bot.Caller.WebWxSendMsg(msg.SendMessage, info, req)
 			return err
 		}
 	case MsgTypeImage:
 		for _, user := range users {
 			msg.FromUserName = s.UserName
 			msg.ToUserName = user.UserName
-			_, err := s.Self.Bot.Caller.Client.WebWxSendMsgImg(msg.SendMessage, req, info)
+			_, err := s.Bot.Caller.Client.WebWxSendMsgImg(msg.SendMessage, req, info)
 			return err
 		}
 	case AppMessage:
 		for _, user := range users {
 			msg.FromUserName = s.UserName
 			msg.ToUserName = user.UserName
-			_, err := s.Self.Bot.Caller.Client.WebWxSendAppMsg(msg.SendMessage, req)
+			_, err := s.Bot.Caller.Client.WebWxSendAppMsg(msg.SendMessage, req)
 			return err
 		}
 	}
@@ -649,15 +644,14 @@ func (m Members) detail(self *Self) error {
 		newMembers = append(newMembers, nMembers...)
 	}
 	if len(newMembers) > 0 {
-		newMembers.init(self)
+		newMembers.init()
 		self.members = newMembers
 	}
 	return nil
 }
 
-func (m Members) init(self *Self) {
+func (m Members) init() {
 	for _, member := range m {
-		member.Self = self
 		member.formatEmoji()
 	}
 }
@@ -666,8 +660,8 @@ func (m Members) init(self *Self) {
 // 文件传输助手的微信身份标识符永远是filehelper
 // 这种形式的对象可能缺少一些其他属性
 // 但是不影响发送信息的功能
-func NewFriendHelper(self *Self) *Friend {
-	return &Friend{&User{UserName: "filehelper", Self: self}}
+func NewFriendHelper() *Friend {
+	return &Friend{&User{UserName: "filehelper"}}
 }
 
 // SendTextToMp 发送文本消息给公众号

@@ -43,11 +43,6 @@ func (b *Bot) Alive() bool {
 }
 
 // GetCurrentUser 获取当前的用户
-//		self, err := bot.GetCurrentUser()
-//		if err != nil {
-//			return
-//		}
-//		fmt.Println(self.NickName)
 func (b *Bot) GetCurrentUser() (*Self, error) {
 	if b.self == nil {
 		return nil, errors.New("user not login")
@@ -207,7 +202,6 @@ func (b *Bot) WebInit() error {
 		ContactMap: map[string]*User{},
 	}
 	b.self.formatEmoji()
-	b.self.Self = b.self
 	b.Storage.Response = resp
 	for _, user := range resp.ContactList {
 		u := user

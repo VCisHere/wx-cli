@@ -1,6 +1,8 @@
 package util
 
 import (
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -10,4 +12,12 @@ func Int64ToTimeString(i int64) string {
 	createTime := i
 	t := time.Unix(createTime, 0)
 	return t.Format(timeFormat)
+}
+
+func GetCurrentPath() string {
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Dir(ex)
 }
