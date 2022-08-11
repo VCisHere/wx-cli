@@ -167,10 +167,9 @@ func (s *Self) FindContactByUserName(username string) (*User, bool) {
 }
 
 // Members 获取所有的好友、群组、公众号信息
-func (s *Self) Members(update ...bool) (Members, error) {
-	// 首先判断缓存里有没有,如果没有则去更新缓存
-	// 判断是否需要更新,如果传入的参数不为nil,则取第一个
-	if s.members == nil || (len(update) > 0 && update[0]) {
+func (s *Self) Members(update bool) (Members, error) {
+	// 首先判断缓存里有没有 如果没有则去更新缓存
+	if s.members == nil || update {
 		if err := s.updateMembers(); err != nil {
 			return nil, err
 		}
@@ -197,7 +196,7 @@ func (s *Self) FileHelper() (*Friend, error) {
 	if s.fileHelper != nil {
 		return s.fileHelper, nil
 	}
-	members, err := s.Members()
+	members, err := s.Members(false)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +245,7 @@ func (s *Self) Mps(update ...bool) (Mps, error) {
 // UpdateMembersDetail 更新所有的联系人信息
 func (s *Self) UpdateMembersDetail() error {
 	// 先获取所有的联系人
-	members, err := s.Members()
+	members, err := s.Members(false)
 	if err != nil {
 		return err
 	}

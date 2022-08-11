@@ -9,13 +9,14 @@ import (
 type Messages []*client.Message
 
 type Cache struct {
-	Messages Messages
-	fileName string
+	messages   Messages
+	viewMsgCur int
+	fileName   string
 }
 
 func NewCache(fileName string) *Cache {
 	return &Cache{
-		Messages: make([]*client.Message, 0),
+		messages: make([]*client.Message, 0),
 		fileName: fileName,
 	}
 }
@@ -36,5 +37,15 @@ func NewCacheFromFile(fileName string) (*Cache, error) {
 }
 
 func (c *Cache) StoreMessage(msg *client.Message) {
-	c.Messages = append(c.Messages, msg)
+	c.messages = append(c.messages, msg)
+}
+
+func (c *Cache) AllMessages() Messages {
+	return c.messages
+}
+
+func (c *Cache) UnreadMessages() Messages {
+	cur := c.viewMsgCur
+	c.viewMsgCur = len(c.messages)
+	return c.messages[cur:]
 }

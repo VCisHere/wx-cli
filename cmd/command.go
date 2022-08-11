@@ -55,15 +55,53 @@ func (c cmdFactory) CmdFriends() *cli.Command {
 	}
 }
 
+func (c cmdFactory) CmdFetchMembers() *cli.Command {
+	return &cli.Command{
+		Aliases: []string{
+			"fetch",
+		},
+		Usage:       "FetchMembers",
+		Description: "Fetch All Members",
+		Action: func(ctx *cli.Context) error {
+			fmt.Println("Fetching Members...")
+			err := h.FetchMembers()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Println("Fetched", h.MemberCount())
+			}
+			return nil
+		},
+	}
+}
+
+func (c cmdFactory) CmdAllMessages() *cli.Command {
+	return &cli.Command{
+		Aliases: []string{
+			"am",
+		},
+		Usage:       "AllMessages",
+		Description: "Show All Messages",
+		Action: func(ctx *cli.Context) error {
+			messages := h.AllMessages()
+			for _, msg := range messages {
+				text := h.MessageToString(msg)
+				fmt.Println(text)
+			}
+			return nil
+		},
+	}
+}
+
 func (c cmdFactory) CmdMessages() *cli.Command {
 	return &cli.Command{
 		Aliases: []string{
 			"m",
 		},
 		Usage:       "Messages",
-		Description: "Show Messages",
+		Description: "Show Unread Messages",
 		Action: func(ctx *cli.Context) error {
-			messages := h.Messages()
+			messages := h.UnreadMessages()
 			for _, msg := range messages {
 				text := h.MessageToString(msg)
 				fmt.Println(text)

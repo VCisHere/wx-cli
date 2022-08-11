@@ -64,11 +64,20 @@ func (h *Helper) HotLogin() error {
 		return nil
 	}
 	h.cache = storage.NewCache(filePath)
-	_, err = h.self.Members()
-	if err != nil {
-		return err
-	}
 	return nil
+}
+
+func (h *Helper) FetchMembers() error {
+	_, err := h.self.Members(true)
+	return err
+}
+
+func (h *Helper) MemberCount() int {
+	members, err := h.self.Members(false)
+	if err != nil {
+		return 0
+	}
+	return len(members)
 }
 
 func (h *Helper) GetCurrentUserName() string {
@@ -112,8 +121,12 @@ func (h *Helper) StoreMessage(msg *client.Message) {
 	h.cache.StoreMessage(msg)
 }
 
-func (h *Helper) Messages() storage.Messages {
-	return h.cache.Messages
+func (h *Helper) AllMessages() storage.Messages {
+	return h.cache.AllMessages()
+}
+
+func (h *Helper) UnreadMessages() storage.Messages {
+	return h.cache.UnreadMessages()
 }
 
 func (h *Helper) MessageToString(msg *client.Message) string {
