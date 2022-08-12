@@ -195,9 +195,8 @@ func (m *Message) IsPicture() bool {
 	return m.MsgType == MsgTypeImage
 }
 
-// IsEmoticon 是否为表情包消息
-func (m *Message) IsEmoticon() bool {
-	return m.MsgType == MsgTypeEmoticon
+func (m *Message) IsSticker() bool {
+	return m.MsgType == MsgTypeSticker
 }
 
 func (m *Message) IsVoice() bool {
@@ -252,14 +251,14 @@ func (m *Message) IsSysNotice() bool {
 	return m.MsgType == 9999
 }
 
-// StatusNotify 判断是否为操作通知消息
-func (m *Message) StatusNotify() bool {
-	return m.MsgType == 51
+// IsStatusNotify 判断是否为操作通知消息
+func (m *Message) IsStatusNotify() bool {
+	return m.MsgType == MsgTypeWxInit
 }
 
 // HasFile 判断消息是否为文件类型的消息
 func (m *Message) HasFile() bool {
-	return m.IsPicture() || m.IsVoice() || m.IsVideo() || (m.IsMedia() && m.AppMsgType == AppMsgTypeAttach) || m.IsEmoticon()
+	return m.IsPicture() || m.IsVoice() || m.IsVideo() || (m.IsMedia() && m.AppMsgType == AppMsgTypeAttach) || m.IsSticker()
 }
 
 // GetFile 获取文件消息的文件
@@ -267,7 +266,7 @@ func (m *Message) GetFile() (*http.Response, error) {
 	if !m.HasFile() {
 		return nil, errors.New("invalid message type")
 	}
-	if m.IsPicture() || m.IsEmoticon() {
+	if m.IsPicture() || m.IsSticker() {
 		return m.Bot.Caller.Client.WebWxGetMsgImg(m, m.Bot.Storage.LoginInfo)
 	}
 	if m.IsVoice() {
@@ -284,7 +283,7 @@ func (m *Message) GetFile() (*http.Response, error) {
 
 // GetPicture 获取图片消息的响应
 func (m *Message) GetPicture() (*http.Response, error) {
-	if !(m.IsPicture() || m.IsEmoticon()) {
+	if !(m.IsPicture() || m.IsSticker()) {
 		return nil, errors.New("picture message required")
 	}
 	return m.Bot.Caller.Client.WebWxGetMsgImg(m, m.Bot.Storage.LoginInfo)
@@ -748,9 +747,4 @@ func (m *Message) String() string {
 // IsAt 判断消息是否为@消息
 func (m *Message) IsAt() bool {
 	return m.isAt
-}
-
-// IsTickled 判断消息是否为拍一拍
-func (m *Message) IsTickled() bool {
-	return m.IsSystem() && strings.Contains(m.Content, "拍了拍")
 }

@@ -148,16 +148,16 @@ func (h *Helper) MessageToString(msg *client.Message) string {
 
 	switch msg.Category {
 	case client.CategoryUnknown:
-		senderText = "[Unknown]"
+		msgType = "[U]"
 	case client.CategorySystem:
-		msgType = "S"
+		msgType = "[S]"
 		senderText = "[System]"
 	case client.CategoryFriend:
-		msgType = "F"
+		msgType = "[F]"
 		senderText = fmt.Sprintf("[%s]->", h.GetName(sender))
 		receiverText = fmt.Sprintf("[%s]", h.GetName(receiver))
 	case client.CategoryGroup:
-		msgType = "G"
+		msgType = "[G]"
 		senderInGroup, err := msg.SenderInGroup()
 		if err != nil {
 			if errors.Is(err, client.ErrMsgIsFromSys) {
@@ -173,7 +173,7 @@ func (h *Helper) MessageToString(msg *client.Message) string {
 			}
 		}
 	case client.CategoryMP:
-		msgType = "P"
+		msgType = "[P]"
 		senderText = fmt.Sprintf("[%s]->", h.GetName(sender))
 		receiverText = fmt.Sprintf("[%s]", h.GetName(receiver))
 	}
@@ -181,6 +181,6 @@ func (h *Helper) MessageToString(msg *client.Message) string {
 	createTime := msg.CreateTime
 	timeStr := util.Int64ToTimeString(createTime)
 	messageStr := HandleMessage(msg)
-	result := fmt.Sprintf("[%s][%s]%s%s:%s", timeStr, msgType, senderText, receiverText, messageStr)
+	result := fmt.Sprintf("[%s]%s%s%s:%s", timeStr, msgType, senderText, receiverText, messageStr)
 	return fmt.Sprintf("%s", result)
 }

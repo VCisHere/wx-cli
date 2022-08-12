@@ -8,7 +8,7 @@ import (
 func ExampleMessageType_output() {
 	for _, wxt := range []MessageType{
 		MsgTypeText, MsgTypeImage, MsgTypeVoice, MsgTypeVerify,
-		MsgTypePossibleFriend, MsgTypeShareCard, MsgTypeVideo, MsgTypeEmoticon,
+		MsgTypePossibleFriend, MsgTypeShareCard, MsgTypeVideo, MsgTypeSticker,
 		MsgTypeLocation, MsgTypeApp, MsgTypeVoip, MsgTypeVoipNotify,
 		MsgTypeVoipInvite, MsgTypeMicroVideo, MsgTypeSys, MsgTypeRecalled} {
 		fmt.Printf("收到一条%s(type %d)\n", wxt, wxt)

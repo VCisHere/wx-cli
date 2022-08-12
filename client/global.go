@@ -67,9 +67,10 @@ const (
 	MsgTypePossibleFriend MessageType = 40    // 好友推荐消息
 	MsgTypeShareCard      MessageType = 42    // 名片消息
 	MsgTypeVideo          MessageType = 43    // 视频消息
-	MsgTypeEmoticon       MessageType = 47    // 表情消息
+	MsgTypeSticker        MessageType = 47    // 动画表情
 	MsgTypeLocation       MessageType = 48    // 地理位置消息
 	MsgTypeApp            MessageType = 49    // APP消息
+	MsgTypeWxInit         MessageType = 51    // 初始化消息
 	MsgTypeVoip           MessageType = 50    // VOIP消息
 	MsgTypeVoipNotify     MessageType = 52    // VOIP结束消息
 	MsgTypeVoipInvite     MessageType = 53    // VOIP邀请

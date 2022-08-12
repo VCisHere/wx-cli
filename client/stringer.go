@@ -15,7 +15,7 @@ func _() {
 	_ = x[MsgTypePossibleFriend-40]
 	_ = x[MsgTypeShareCard-42]
 	_ = x[MsgTypeVideo-43]
-	_ = x[MsgTypeEmoticon-47]
+	_ = x[MsgTypeSticker-47]
 	_ = x[MsgTypeLocation-48]
 	_ = x[MsgTypeApp-49]
 	_ = x[MsgTypeVoip-50]

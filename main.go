@@ -27,7 +27,7 @@ func LoginCallback(body []byte) {
 }
 
 func MessageHandler(msg *client.Message) {
-	if len(msg.Content) == 0 {
+	if msg.IsStatusNotify() {
 		return
 	}
 	h.StoreMessage(msg)
